@@ -1,8 +1,8 @@
  Lung X-Ray Classification Using SVM
 
  Overview
-This project implements a **machine learning pipeline** to classify **lung X-ray images** 
-into multiple categories(e.g., Normal, Lung Opacity, Viral Pneumonia) using a **Support Vector Machine (SVM)** classifier. 
+This project implements a machine learning pipeline to classify lung X-ray images
+into multiple categories(e.g., Normal, Lung Opacity, Viral Pneumonia) using a **Support Vector Machine (SVM) classifier. 
 >> image preprocessing, 
 >> feature extraction (HOG + LBP),
 >> PCA-based dimensionality reduction,
@@ -93,4 +93,6 @@ python lung_xray_svm.py
 > Author
 
 1 Yohannes Shiferaw ............43829\14
+
 2 Dawit Belete .................01551\14
+
