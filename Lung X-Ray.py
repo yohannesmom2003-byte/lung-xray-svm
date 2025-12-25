@@ -1,7 +1,6 @@
-# ==============================================
+# =========================================================
 # Lung X-Ray Classification Using SVM
-# Steps 1–10 Combined
-# ==============================================
+# =========================================================
 
 import os
 import cv2
@@ -30,42 +29,93 @@ for class_name in classes:
     print(f"  {class_name}: {num_images} images")
 
 # -----------------------------
-# Step 2: Load and Preprocess Images
+# Step 2: Load & Preprocess Images
 # -----------------------------
-def load_images(base_path, img_size=(128,128), max_per_class=800):
-    X, y = [], []
-    class_names = sorted([d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))])
-    
-    for idx, cls in enumerate(class_names):
-        files = [f for f in os.listdir(os.path.join(base_path, cls)) 
-                 if f.lower().endswith(('.png', '.jpg', '.jpeg'))][:max_per_class]
-        for f in files:
-            img = cv2.imread(os.path.join(base_path, cls, f))
-            if img is None:
+def load_lung_dataset(base_path, img_size=(128, 128), max_per_class=800):
+    X, y, class_names = [], [], []
+
+    classes = sorted([d for d in os.listdir(base_path) 
+                      if os.path.isdir(os.path.join(base_path, d))])
+    print(f"\n🔄 Loading {len(classes)} classes...")
+
+    for class_idx, class_name in enumerate(classes):
+        class_path = os.path.join(base_path, class_name)
+        image_files = [f for f in os.listdir(class_path) 
+                       if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+        
+        print(f"  Processing {class_name}...")
+        images_loaded = 0
+
+        for img_file in image_files[:max_per_class]:
+            img_path = os.path.join(class_path, img_file)
+            try:
+                img = cv2.imread(img_path)
+                if img is None:
+                    continue
+                if len(img.shape) == 3:
+                    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                img = cv2.resize(img, img_size)
+                img = img.astype('float32') / 255.0
+                img = np.expand_dims(img, axis=-1)
+                X.append(img)
+                y.append(class_idx)
+                images_loaded += 1
+            except:
                 continue
-            if len(img.shape)==3:
-                img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            img = cv2.resize(img, img_size)
-            img = img.astype('float32') / 255.0
-            img = np.expand_dims(img, axis=-1)
-            X.append(img)
-            y.append(idx)
-    return np.array(X), np.array(y), class_names
+        
+        class_names.append(class_name)
+        print(f"  ✅ {class_name}: {images_loaded} images loaded")
+    
+    X = np.array(X)
+    y = np.array(y)
+    print(f"\n🎉 DATASET LOADED SUCCESSFULLY!")
+    print(f"  Total images: {len(X)}")
+    print(f"  Image shape: {X[0].shape}")
+    print(f"  Classes: {class_names}")
 
-X, y, class_names = load_images(dataset_path)
+    return X, y, class_names
+
+X, y, class_names = load_lung_dataset(dataset_path, max_per_class=800)
 
 # -----------------------------
-# Step 3: Train/Test Split
+# Step 3: Display Sample Images
+# -----------------------------
+def display_samples(X, y, class_names, samples_per_class=4):
+    n_classes = len(class_names)
+    fig, axes = plt.subplots(n_classes, samples_per_class, figsize=(12, 3*n_classes))
+    
+    if n_classes == 1:
+        axes = np.array([axes])
+    
+    for class_idx in range(n_classes):
+        indices = np.where(y == class_idx)[0]
+        np.random.shuffle(indices)
+        for i in range(samples_per_class):
+            if i < len(indices):
+                ax = axes[class_idx, i] if n_classes > 1 else axes[i]
+                img_idx = indices[i]
+                ax.imshow(X[img_idx][:,:,0], cmap='gray')
+                ax.set_title(f"{class_names[class_idx]} #{i+1}")
+                ax.axis('off')
+    
+    plt.tight_layout()
+    plt.show()
+
+display_samples(X, y, class_names)
+
+# -----------------------------
+# Step 4: Train/Test Split
 # -----------------------------
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
 
 # -----------------------------
-# Step 4: Feature Extraction (HOG + LBP)
+# Step 5: Feature Extraction (HOG + LBP)
 # -----------------------------
 def extract_features(images):
     features = []
     for img in images:
-        if img.ndim==3: img = img[:,:,0]
+        if img.ndim == 3: 
+            img = img[:,:,0]
         img_uint8 = (img*255).astype('uint8')
         # HOG
         hog_feat = feature.hog(img_uint8, orientations=9, pixels_per_cell=(8,8), cells_per_block=(2,2), block_norm='L2-Hys')
@@ -80,7 +130,7 @@ X_train_feat = extract_features(X_train)
 X_test_feat = extract_features(X_test)
 
 # -----------------------------
-# Step 5: PCA
+# Step 6: PCA
 # -----------------------------
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train_feat)
@@ -94,13 +144,13 @@ print("Original features:", X_train_feat.shape[1])
 print("After PCA:", X_train_pca.shape[1])
 
 # -----------------------------
-# Step 6: Train SVM
+# Step 7: Train SVM
 # -----------------------------
 svm = SVC(kernel='rbf', C=1, gamma='scale', probability=True, random_state=42)
 svm.fit(X_train_pca, y_train)
 
 # -----------------------------
-# Step 7: Evaluate Model
+# Step 8: Evaluate Model
 # -----------------------------
 y_pred = svm.predict(X_test_pca)
 accuracy = accuracy_score(y_test, y_pred)
@@ -117,14 +167,13 @@ plt.ylabel("True")
 plt.title("Confusion Matrix")
 plt.show()
 
-# Per-class accuracy
 print("Per-Class Accuracy:")
 for i, cls in enumerate(class_names):
     acc = cm[i,i]/cm[i].sum()
     print(f"  {cls}: {acc:.3f}")
 
 # -----------------------------
-# Step 8: PCA Explained Variance
+# Step 9: PCA Explained Variance + Optional ROC
 # -----------------------------
 component_importance = pca.explained_variance_ratio_
 plt.figure(figsize=(12,4))
@@ -145,9 +194,7 @@ plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.show()
 
-# -----------------------------
-# Step 9: Optional ROC Curve (if probability=True)
-# -----------------------------
+# Optional ROC
 if hasattr(svm, "predict_proba"):
     y_test_bin = label_binarize(y_test, classes=np.arange(len(class_names)))
     y_score = svm.predict_proba(X_test_pca)
@@ -165,7 +212,7 @@ if hasattr(svm, "predict_proba"):
     plt.show()
 
 # -----------------------------
-# Step 10: Save the Model
+# Step 10: Save Model
 # -----------------------------
 model_path = '/content/drive/MyDrive/svm_lung_xray_model.pkl'
 joblib.dump({
