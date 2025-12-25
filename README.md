@@ -67,8 +67,8 @@ pip install numpy opencv-python scikit-image scikit-learn matplotlib seaborn job
 1. Clone the repository:
 
 ```bash
-git clone <your-repo-url>
-cd <repo-folder>
+git clone <[your-repo-url](https://github.com/yohannesmom2003-byte/lung-xray-svm.git)>
+cd <lung-xray-svm>
 ```
 
 2. Update `dataset_path> https://www.kaggle.com/datasets/fatemehmehrparvar/lung-disease/data
@@ -95,4 +95,5 @@ python lung_xray_svm.py
 1 Yohannes Shiferaw ............43829\14
 
 2 Dawit Belete .................01551\14
+
 
